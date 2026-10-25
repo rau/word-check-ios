@@ -229,7 +229,13 @@ final class GameTests: XCTestCase {
   app.segmentedControls["playerCount"].buttons["3 players"].tap()
   app.buttons["startGame"].tap()
   XCTAssertEqual(app.staticTexts["score-2"].label,"Player 3\n0")
-  menu("History");XCTAssertTrue(app.staticTexts["No turns yet"].exists);app.buttons["Done"].tap()
+  menu("History")
+  XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout:3))
+  // UIKit exposes the empty table to accessibility, not the decorative message.
+  XCTAssertTrue(app.tables["Empty list"].waitForExistence(timeout:3))
+  capture("Empty-history")
+  XCTAssertEqual(app.tables.cells.count,0)
+  app.buttons["Done"].tap()
  }
 
 }
