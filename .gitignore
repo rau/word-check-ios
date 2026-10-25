@@ -1,0 +1,26 @@
+build/
+build.log
+*.xcuserstate
+xcuserdata/
+.DS_Store
+
+test.log
+
+# Local builds, SwiftPM state and test reports
+.build/
+.swiftpm/
+*.xcresult/
+*.log
+
+# Licensed resources are supplied locally, never published as source.
+WordCheck/Data/*.txt
+
+# Account/device receipts, signing files, store metadata and working captures
+release/
+screenshots/
+*.mobileprovision
+*.p12
+*.p8
+*.key
+.env
+.env.*

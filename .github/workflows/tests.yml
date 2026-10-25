@@ -1,0 +1,20 @@
+name: Core tests
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  core:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test rules, drafts, persistence, and dictionary validation
+        run: swift test --enable-code-coverage
+      - name: Preserve coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-coverage
+          path: .build/**/codecov/*.json
+          if-no-files-found: ignore
