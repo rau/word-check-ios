@@ -30,3 +30,7 @@ GitHub Actions runs `swift test --enable-code-coverage` on macOS without signing
 `./scripts/test-ios.sh SIMULATOR_UDID` runs UI tests with code coverage and saves an `.xcresult` bundle under `build/`. Open that result in Xcode to inspect failures, attachments, and coverage. For core coverage, `swift test --show-codecov-path` prints the exported JSON path.
 
 The two older `scripts/check-*.swift` runners remain available as standalone regression checks. Release submission and Apple review are deliberately outside the automated test suite.
+
+## Adversarial regression checks
+
+`StressTests` uses a fixed random seed for reproducible sequences: 10,000 draft edits and 3,200 play/pass/challenge/undo/persistence steps. It checks editable-source mapping, preservation of existing tiles, scoring changes, turn ownership, and serialized state. Focused cases reject a 100,000-character paste atomically, Unicode rack letters that change under uppercasing, and corrupt saved scores/tile data/challenge references. UI regressions cover cancelling the second blank assignment, then editing and playing the first blank, edge-of-board recovery, typing past the draft limit, and invalid endgame recovery.

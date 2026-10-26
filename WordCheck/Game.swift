@@ -64,8 +64,9 @@ struct TrackedGame: Codable {
         guard !finished, racks.count == names.count else { throw RuleError("This game has already ended.") }
         var penalties = [Int]()
         for rack in racks {
-            let letters = rack.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-            guard letters.count <= 7, letters.utf8.allSatisfy({ (65...90).contains($0) || $0 == 63 }) else { throw RuleError("Enter up to 7 remaining letters per player. Use ? for a blank.") }
+            let raw = rack.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard raw.utf8.count <= 7, raw.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) || $0 == 63 }) else { throw RuleError("Enter up to 7 remaining letters per player. Use ? for a blank.") }
+            let letters = raw.uppercased()
             penalties.append(letters.reduce(0) { $0 + BoardRules.values[String($1), default: 0] })
         }
         if let p = wentOut {
@@ -186,6 +187,24 @@ final class GameStore {
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         let game = try JSONDecoder().decode(TrackedGame.self, from: Data(contentsOf: url))
         guard (2...4).contains(game.names.count), (0...1).contains(game.lexicon), game.turns.allSatisfy({ t in game.names.indices.contains(t.player) && t.changes.count == game.names.count && t.placements.allSatisfy({ (0..<225).contains($0.index) }) }) else { throw RuleError("The saved game could not be read.") }
+        var totals = Array(repeating: 0, count: game.names.count)
+        let kinds: Set<String> = ["play", "pass", "exchange", "finish", "challengeWon", "challengeLost"]
+        for (index, turn) in game.turns.enumerated() {
+            guard kinds.contains(turn.kind), turn.lexicon.map({ (0...1).contains($0) }) ?? true,
+                  turn.changes.allSatisfy({ (-100_000...100_000).contains($0) }),
+                  turn.placements.allSatisfy({ $0.tile.letter.utf8.count == 1 && $0.tile.letter.utf8.allSatisfy { (65...90).contains($0) } }) else {
+                throw RuleError("The saved game could not be read.")
+            }
+            if turn.kind == "challengeWon" || turn.kind == "challengeLost" {
+                guard let previous = turn.challengedTurn, previous == index - 1, previous >= 0,
+                      game.turns[previous].kind == "play" else { throw RuleError("The saved game could not be read.") }
+            }
+            for player in totals.indices {
+                let sum = totals[player].addingReportingOverflow(turn.changes[player])
+                guard !sum.overflow else { throw RuleError("The saved game could not be read.") }
+                totals[player] = sum.partialValue
+            }
+        }
         return game
     }
     func save(_ game: TrackedGame) throws {
@@ -231,6 +250,11 @@ struct BoardDraft {
         if let first=removed.min() { insertion=first }
         for index in removed.sorted(by:>) { chars.remove(at:index) }
         insertion=min(insertion,chars.count)
+        // A board line is at most 15 squares. Reject an oversized paste atomically,
+        // before preview construction can repeatedly scan a huge string.
+        guard replacement.utf8.count <= 15,
+              replacement.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) || $0 == 63 }),
+              chars.count + replacement.utf8.count <= 15 else { return min(lower, input.count) }
         chars.insert(contentsOf:Array(replacement.uppercased()),at:insertion)
         input=String(chars)
         return insertion+replacement.count

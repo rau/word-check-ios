@@ -238,4 +238,40 @@ final class GameTests: XCTestCase {
   app.buttons["Done"].tap()
  }
 
+ func testInterruptedBlankAssignmentAndEdgeRecovery() {
+  choose(112);type("??\n");app.buttons["playMove"].tap();assignBlank("A")
+  XCTAssertTrue(app.textFields["blankLetter"].waitForExistence(timeout:3))
+  app.alerts.buttons["Cancel"].tap()
+  XCTAssertEqual(app.staticTexts["score-0"].label,"Alex\n0")
+  let field=app.textFields["moveWord"];field.tap()
+  field.typeText(XCUIKeyboardKey.delete.rawValue+"T\n")
+  app.buttons["playMove"].tap()
+  XCTAssertEqual(app.staticTexts["score-0"].label,"Alex\n2")
+  XCTAssertTrue(app.buttons["square-112"].label.contains("A, blank"))
+  choose(224);type("AT\n");app.buttons["playMove"].tap()
+  XCTAssertTrue(app.alerts["Check placement"].waitForExistence(timeout:3));app.alerts.buttons["OK"].tap()
+  XCTAssertEqual(app.staticTexts["score-1"].label,"Sam\n0")
+  app.buttons["Clear draft"].tap()
+  choose(97);app.segmentedControls["moveDirection"].buttons["Down ↓"].tap();type("AT\n")
+  XCTAssertEqual(field.value as? String,"AAT")
+  app.buttons["playMove"].tap()
+  XCTAssertEqual(app.staticTexts["score-1"].label,"Sam\n2")
+ }
+ func testOversizedTypingAndInvalidFinishLeaveGameUsable() {
+  choose(112);type(String(repeating:"A",count:64)+"\n")
+  XCTAssertEqual((app.textFields["moveWord"].value as? String)?.count,15)
+  app.buttons["Clear draft"].tap();choose(112);type("CAT\n");app.buttons["playMove"].tap()
+  menu("Finish game")
+  app.textFields["rack-0"].tap();app.textFields["rack-0"].typeText("A")
+  app.segmentedControls["wentOut"].buttons["Alex"].tap();app.buttons["finishGame"].tap()
+  XCTAssertTrue(app.alerts["Check the details"].waitForExistence(timeout:3));app.alerts.buttons["OK"].tap()
+  app.navigationBars.buttons["Cancel"].tap()
+  XCTAssertEqual(app.staticTexts["score-0"].label,"Alex\n10")
+  menu("Challenge last play");app.alerts.buttons["Challenge"].tap()
+  XCTAssertTrue(app.alerts["Challenge unsuccessful"].waitForExistence(timeout:3));app.alerts.buttons["OK"].tap()
+  menu("Undo last turn");app.alerts.buttons["Undo"].tap()
+  XCTAssertEqual(app.staticTexts["score-1"].value as? String,"Current turn")
+  XCTAssertEqual(app.staticTexts["score-0"].label,"Alex\n10")
+ }
+
 }

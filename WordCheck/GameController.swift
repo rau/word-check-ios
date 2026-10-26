@@ -216,11 +216,11 @@ final class GameController: UIViewController, UITextFieldDelegate {
         prompt.addAction(UIAlertAction(title:"Cancel",style:.cancel))
         prompt.addAction(UIAlertAction(title:"Continue",style:.default) { [weak self,weak prompt] _ in
             guard let self else { return }
-            let letter=(prompt?.textFields?.first?.text ?? "").trimmingCharacters(in:.whitespacesAndNewlines).uppercased()
-            guard letter.utf8.count == 1, let byte=letter.utf8.first, (65...90).contains(byte) else {
+            let raw=(prompt?.textFields?.first?.text ?? "").trimmingCharacters(in:.whitespacesAndNewlines)
+            guard raw.utf8.count == 1, let byte=raw.utf8.first, (65...90).contains(byte) || (97...122).contains(byte) else {
                 self.assignBlank(at:index); return
             }
-            var chars=Array(self.draftEntry.input); chars[index]=Character(letter.lowercased())
+            var chars=Array(self.draftEntry.input); chars[index]=Character(raw.lowercased())
             self.draftEntry.input=String(chars); self.updatePreview(); self.commit()
         })
         present(prompt,animated:true)
@@ -275,7 +275,7 @@ final class GameController: UIViewController, UITextFieldDelegate {
     private func alert(_ title:String,_ message:String){let a=UIAlertController(title:title,message:message,preferredStyle:.alert);a.addAction(UIAlertAction(title:"OK",style:.default));present(a,animated:true)}
     private func confirm(_ title:String?,_ message:String,action:String,handler:@escaping()->Void){word.resignFirstResponder();let a=UIAlertController(title:title,message:message,preferredStyle:.alert);a.addAction(UIAlertAction(title:"Cancel",style:.cancel));a.addAction(UIAlertAction(title:action,style:.default){_ in handler()});present(a,animated:true)}
     func textField(_ textField:UITextField,shouldChangeCharactersIn range:NSRange,replacementString string:String)->Bool {
-        guard string.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) || $0 == 63 }) else { return false }
+        guard string.utf8.count <= 15, string.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) || $0 == 63 }) else { return false }
         let displayed=draftEntry.display(board:board.canvas.tiles,start:start,vertical:direction.selectedSegmentIndex==1)
         let caret=draftEntry.edit(range:range,replacement:string,display:displayed)
         updatePreview()
